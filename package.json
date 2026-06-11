@@ -1,0 +1,22 @@
+{
+  "name": "jelly-merge-game",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "gen:assets": "node tools/gen-audio.mjs"
+  },
+  "dependencies": {
+    "postprocessing": "^6.39.1",
+    "three": "latest"
+  },
+  "devDependencies": {
+    "@types/three": "latest",
+    "typescript": "latest",
+    "vite": "latest"
+  }
+}

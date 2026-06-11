@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="128" viewBox="0 0 1024 128">
+  <!-- 8-cell mouth atlas, 128x128 each:
+       0 smile | 1 open-joy | 2 smug-cat | 3 squint-wavy | 4 oh | 5 pout | 6 tongue-grin | 7 tiny-3 -->
+  <!-- 0: smile -->
+  <path d="M34 52 Q64 86 94 52" stroke="#4A2B3A" stroke-width="11" fill="none" stroke-linecap="round"/>
+  <!-- 1: open joy -->
+  <g transform="translate(128 0)">
+    <path d="M30 44 Q64 110 98 44 Q64 60 30 44 Z" fill="#4A2B3A"/>
+    <path d="M44 78 Q64 96 84 78 Q64 104 44 78 Z" fill="#FF7B9C"/>
+  </g>
+  <!-- 2: smug cat "w" -->
+  <g transform="translate(256 0)">
+    <path d="M28 52 Q42 74 56 52 Q50 78 64 64 Q78 78 72 52 Q86 74 100 52"
+          stroke="#4A2B3A" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <!-- 3: squint wavy -->
+  <g transform="translate(384 0)">
+    <path d="M30 64 Q42 52 54 64 Q66 76 78 64 Q90 52 98 62"
+          stroke="#4A2B3A" stroke-width="10" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 4: oh -->
+  <g transform="translate(512 0)">
+    <ellipse cx="64" cy="64" rx="20" ry="26" fill="#4A2B3A"/>
+    <ellipse cx="64" cy="74" rx="10" ry="11" fill="#FF7B9C"/>
+  </g>
+  <!-- 5: pout -->
+  <g transform="translate(640 0)">
+    <path d="M34 74 Q64 44 94 74" stroke="#4A2B3A" stroke-width="11" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- 6: tongue-out grin -->
+  <g transform="translate(768 0)">
+    <path d="M30 50 Q64 88 98 50" stroke="#4A2B3A" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M66 68 Q70 96 88 92 Q98 88 90 64 Z" fill="#FF7B9C" stroke="#E8568A" stroke-width="5" stroke-linejoin="round"/>
+  </g>
+  <!-- 7: tiny "3" kiss -->
+  <g transform="translate(896 0)">
+    <path d="M56 46 Q76 52 60 62 Q78 70 56 80" stroke="#4A2B3A" stroke-width="9" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

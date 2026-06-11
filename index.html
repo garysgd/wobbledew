@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Wobbledew — every wish starts as a wobble</title>
+  <meta name="description" content="A squishy jelly merge game. Drop Dewlings into the wishing jar, match twins, and grow the legendary Borealis." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫧</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Fredoka:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #fff6f0;
+      --panel: rgba(46, 42, 74, 0.55);
+      --panel-edge: rgba(191, 232, 255, 0.25);
+      --pink: #ffd9e8;
+      --lamp: #ffe8b8;
+      --button: #9c8cff;
+      --danger: #e0436e;
+      --aurora: #8ffae1;
+      font-size: 16px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      position: fixed; inset: 0; overflow: hidden;
+      width: 100%; height: 100%;
+      background: #2e2a4a;
+      font-family: 'Fredoka', 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+      color: var(--ink);
+      touch-action: none;
+      overscroll-behavior: none;
+      user-select: none; -webkit-user-select: none;
+    }
+    canvas#game { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+    #ui { position: absolute; inset: 0; pointer-events: none; }
+    #ui button { pointer-events: auto; cursor: pointer; font-family: inherit; }
+
+    /* ---------- HUD ---------- */
+    #hud {
+      position: absolute; top: max(10px, env(safe-area-inset-top));
+      left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right));
+      display: flex; justify-content: space-between; align-items: flex-start;
+    }
+    .panel {
+      background: var(--panel); border: 1.5px solid var(--panel-edge);
+      border-radius: 18px; padding: 10px 16px;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 4px 18px rgba(10, 8, 26, 0.35);
+    }
+    .label { font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.75; }
+    #score-val {
+      font-family: 'Baloo 2', 'Fredoka', sans-serif; font-weight: 800;
+      font-size: 2rem; line-height: 1.05; color: var(--lamp);
+      text-shadow: 0 2px 12px rgba(255, 232, 184, 0.35);
+    }
+    #score-val.bump { animation: bump 0.3s ease-out; }
+    @keyframes bump { 30% { transform: scale(1.18); } }
+    #best-line { font-size: 0.78rem; opacity: 0.8; margin-top: 2px; }
+
+    #right-panel { display: flex; gap: 10px; align-items: center; }
+    #next-wrap { text-align: center; }
+    #next-bubble { width: 52px; height: 52px; animation: bob 2.6s ease-in-out infinite; }
+    @keyframes bob { 50% { transform: translateY(-4px); } }
+
+    #star-btn {
+      background: var(--panel); border: 1.5px solid var(--panel-edge); border-radius: 16px;
+      width: 56px; padding: 6px 4px; color: var(--ink);
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      opacity: 0.55; transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+    #star-icon { font-size: 1.4rem; filter: grayscale(0.9); transition: filter 0.2s; }
+    #star-btn.banked { opacity: 1; animation: bankflash 0.55s ease-out; }
+    #star-btn.banked #star-icon { filter: none; animation: starpulse 1.4s ease-in-out infinite; }
+    @keyframes bankflash {
+      0% { transform: scale(1); box-shadow: 0 0 0 rgba(255, 232, 184, 0); }
+      40% { transform: scale(1.4); box-shadow: 0 0 32px rgba(255, 232, 184, 0.9); }
+      100% { transform: scale(1); box-shadow: 0 0 0 rgba(255, 232, 184, 0); }
+    }
+    #star-btn.armed { box-shadow: 0 0 18px var(--lamp); transform: scale(1.08); border-color: var(--lamp); }
+    @keyframes starpulse { 50% { transform: scale(1.25) rotate(12deg); } }
+    #star-ticks { display: flex; gap: 2.5px; }
+    #star-ticks i { width: 4.5px; height: 4.5px; border-radius: 50%; background: rgba(255,255,255,0.22); }
+    #star-ticks i.on { background: var(--lamp); box-shadow: 0 0 5px var(--lamp); }
+
+    #controls {
+      position: absolute; right: max(12px, env(safe-area-inset-right)); top: 50%; transform: translateY(-50%);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    #controls button {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--panel); border: 1.5px solid var(--panel-edge);
+      font-size: 1.1rem; color: var(--ink);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      transition: transform 0.15s;
+    }
+    #controls button:active { transform: scale(0.88); }
+
+    /* ---------- evolution strip ---------- */
+    #evo {
+      position: absolute; bottom: max(8px, env(safe-area-inset-bottom)); left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 3px; align-items: center;
+      background: var(--panel); border: 1.5px solid var(--panel-edge);
+      border-radius: 999px; padding: 5px 12px;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    }
+    .evo-dot { width: 26px; height: 26px; opacity: 0.22; filter: grayscale(1); transition: all 0.4s; }
+    .evo-dot.lit { opacity: 1; filter: none; }
+    .evo-dot svg { display: block; }
+
+    /* ---------- floating popups ---------- */
+    #popups { position: absolute; inset: 0; overflow: hidden; }
+    .pop {
+      position: absolute; transform: translate(-50%, -50%);
+      font-family: 'Baloo 2', sans-serif; font-weight: 800; color: var(--pink);
+      -webkit-text-stroke: 1.2px rgba(20, 12, 40, 0.9);
+      paint-order: stroke fill;
+      text-shadow: 0 2px 10px rgba(20, 12, 40, 0.85);
+      animation: popfloat 1.05s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+      white-space: nowrap;
+    }
+    .pop.chain { color: var(--lamp); -webkit-text-stroke-width: 1.8px; }
+    @keyframes popfloat {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+      12% { opacity: 1; transform: translate(-50%, -65%) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -230%) scale(0.95); }
+    }
+
+    /* ---------- banner ---------- */
+    #banner {
+      position: absolute; top: 18%; left: 50%; transform: translate(-50%, -16px) scale(0.9);
+      background: var(--panel); border: 1.5px solid var(--lamp); border-radius: 999px;
+      padding: 10px 26px; font-family: 'Baloo 2', sans-serif; font-weight: 800;
+      font-size: 1.05rem; color: var(--lamp);
+      opacity: 0; transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 6px 30px rgba(255, 232, 184, 0.25);
+      pointer-events: none; white-space: nowrap;
+    }
+    #banner.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+
+    /* ---------- overlays ---------- */
+    .overlay {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 50% 35%, rgba(46, 42, 74, 0.4), rgba(20, 16, 40, 0.66));
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      pointer-events: auto; transition: opacity 0.45s; z-index: 5;
+    }
+    .overlay.hidden { opacity: 0; pointer-events: none; }
+    .title-card { text-align: center; padding: 30px; max-width: 520px; }
+    .title-card h1 {
+      font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: clamp(3rem, 11vw, 5rem);
+      background: linear-gradient(180deg, #fff 5%, var(--pink) 45%, var(--button) 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 4px 22px rgba(156, 140, 255, 0.45));
+      animation: titlewobble 3.4s ease-in-out infinite;
+    }
+    @keyframes titlewobble {
+      0%, 100% { transform: scale(1, 1); }
+      25% { transform: scale(1.025, 0.975) rotate(-0.6deg); }
+      75% { transform: scale(0.975, 1.025) rotate(0.6deg); }
+    }
+    .tagline { font-size: 1.05rem; color: var(--pink); opacity: 0.95; margin-top: 4px; }
+    .demo-blobs { display: flex; justify-content: center; gap: 14px; margin: 26px 0 8px; }
+    .demo-blobs span {
+      width: 44px; height: 44px; border-radius: 47% 53% 50% 50% / 55% 51% 49% 45%;
+      display: inline-block; animation: jelly 2.2s ease-in-out infinite;
+      box-shadow: inset -6px -8px 14px rgba(0,0,0,0.18), inset 6px 8px 12px rgba(255,255,255,0.55);
+    }
+    .demo-blobs span:nth-child(2) { animation-delay: 0.3s; width: 54px; height: 54px; }
+    .demo-blobs span:nth-child(3) { animation-delay: 0.6s; width: 64px; height: 64px; }
+    @keyframes jelly {
+      0%, 100% { transform: scale(1, 1) translateY(0); }
+      30% { transform: scale(1.12, 0.88) translateY(4px); }
+      60% { transform: scale(0.94, 1.08) translateY(-7px); }
+    }
+    .hint { margin-top: 26px; font-size: 1.15rem; font-weight: 600; color: var(--lamp); animation: hintpulse 1.6s ease-in-out infinite; }
+    @keyframes hintpulse { 50% { opacity: 0.55; } }
+    .how { margin-top: 10px; font-size: 0.85rem; opacity: 0.65; }
+
+    .title-card h2 { font-family: 'Baloo 2', sans-serif; font-size: 2.6rem; color: var(--pink); }
+    .tally-label { margin-top: 14px; font-size: 0.8rem; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.7; }
+    #over-score {
+      font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 4rem; color: var(--lamp);
+      text-shadow: 0 4px 24px rgba(255, 232, 184, 0.4); line-height: 1.1;
+    }
+    #over-best { opacity: 0.8; margin-top: 6px; }
+    #new-best { margin-top: 10px; color: var(--aurora); font-weight: 600; animation: hintpulse 1.2s infinite; }
+    #new-best.hidden { display: none; }
+    #btn-again {
+      margin-top: 26px; padding: 14px 38px; border: none; border-radius: 999px;
+      background: linear-gradient(135deg, var(--button), #b8a4ff);
+      color: #fff; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 1.15rem;
+      box-shadow: 0 6px 26px rgba(156, 140, 255, 0.5);
+      transition: transform 0.15s;
+    }
+    #btn-again:active { transform: scale(0.93); }
+
+    #loading .loader { font-size: 3rem; animation: bob 1.4s ease-in-out infinite; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+    }
+    @media (max-width: 560px) {
+      #score-val { font-size: 1.5rem; }
+      #controls { top: auto; bottom: max(64px, calc(env(safe-area-inset-bottom) + 56px)); transform: none; }
+      .evo-dot { width: 20px; height: 20px; }
+      .evo-dot svg { width: 20px; height: 20px; }
+      /* backdrop blur over a per-frame WebGL canvas is costly on phones */
+      .panel, #controls button, #star-btn, #evo {
+        backdrop-filter: none; -webkit-backdrop-filter: none;
+        background: rgba(40, 36, 66, 0.82);
+      }
+    }
+    @media (max-height: 480px) {
+      /* landscape phones: park the evo strip in the left gutter */
+      #evo { left: max(12px, env(safe-area-inset-left)); transform: none; }
+      .evo-dot, .evo-dot svg { width: 18px; height: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="ui">
+    <div id="hud">
+      <div class="panel" id="score-panel">
+        <div class="label">wishes</div>
+        <div id="score-val">0</div>
+        <div id="best-line">best <span id="best-val">0</span></div>
+      </div>
+      <div id="right-panel">
+        <div class="panel" id="next-wrap">
+          <div class="label">next</div>
+          <div id="next-bubble"></div>
+        </div>
+        <button id="star-btn" title="Star Snack — drop to grow a stuck Dewling">
+          <span id="star-icon">⭐</span>
+          <span id="star-ticks"></span>
+        </button>
+      </div>
+    </div>
+    <div id="controls">
+      <button id="btn-sound" title="sound">🔊</button>
+      <button id="btn-music" title="music">🎵</button>
+      <button id="btn-restart" title="restart">↺</button>
+    </div>
+    <div id="evo"></div>
+    <div id="banner"></div>
+    <div id="popups"></div>
+
+    <div id="title" class="overlay">
+      <div class="title-card">
+        <h1>Wobbledew</h1>
+        <p class="tagline">every wish starts as a wobble ✨</p>
+        <div class="demo-blobs">
+          <span style="background:#FFB3D1"></span>
+          <span style="background:#FFDE6B"></span>
+          <span style="background:#6FC4FF"></span>
+        </div>
+        <p class="hint">tap anywhere to begin</p>
+        <p class="how">drop dewlings into the wishing jar · twins snuggle &amp; grow ·<br/>raise the legendary Borealis 🐋</p>
+      </div>
+    </div>
+
+    <div id="over" class="overlay hidden" style="display:none">
+      <div class="title-card">
+        <h2>bedtime 🌙</h2>
+        <p class="tally-label">wishes kept tonight</p>
+        <div id="over-score">0</div>
+        <p id="over-best">best night: 0</p>
+        <div id="new-best" class="hidden">✨ a new best night! ✨</div>
+        <button id="btn-again">tuck in again</button>
+      </div>
+    </div>
+
+    <div id="loading" class="overlay"><div class="loader">🫧</div></div>
+  </div>
+
+  <div id="errlog" aria-hidden="true" style="position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden"></div>
+  <script>
+    // surface runtime errors for headless --dump-dom verification
+    window.addEventListener('error', function (e) {
+      var log = document.getElementById('errlog')
+      if (log) log.textContent += 'ERROR: ' + e.message + ' @ ' + (e.filename || '') + ':' + (e.lineno || '') + '\n'
+    })
+    window.addEventListener('unhandledrejection', function (e) {
+      var log = document.getElementById('errlog')
+      if (log) log.textContent += 'REJECTION: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)) + '\n'
+    })
+  </script>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
